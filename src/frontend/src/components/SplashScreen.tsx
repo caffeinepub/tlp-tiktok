@@ -75,48 +75,82 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
             transition={{ duration: 0.8, ease: [0.34, 1.56, 0.64, 1] }}
             className="relative z-10 flex flex-col items-center gap-6"
           >
-            {/* Main logo image */}
-            <motion.img
-              src="/assets/generated/tlp-tiktok-logo-transparent.dim_600x300.png"
-              alt="tlp TikTok"
-              className="w-72 md:w-96 object-contain"
-              animate={{ scale: [1, 1.03, 1] }}
+            {/* TLP uploaded image */}
+            <motion.div
+              className="relative"
+              animate={{ scale: [1, 1.04, 1] }}
               transition={{
-                duration: 2,
+                duration: 2.5,
                 repeat: Number.POSITIVE_INFINITY,
                 ease: "easeInOut",
               }}
-            />
+            >
+              <div
+                className="absolute inset-0 rounded-2xl opacity-50 blur-xl"
+                style={{ background: "oklch(0.55 0.22 145)" }}
+              />
+              <img
+                src="/assets/uploads/tlp-tehreek-e-labbaik-pakistan-260nw-2418832045-3-1.jpg"
+                alt="TLP Tehreek-e-Labbaik Pakistan"
+                className="relative w-64 md:w-80 object-contain rounded-2xl shadow-2xl"
+                style={{
+                  border: "3px solid oklch(0.55 0.22 145 / 0.8)",
+                  boxShadow:
+                    "0 0 40px oklch(0.55 0.22 145 / 0.5), 0 20px 60px oklch(0 0 0 / 0.6)",
+                }}
+              />
+            </motion.div>
 
-            {/* Fallback text logo */}
-            <div className="flex flex-col items-center gap-1">
-              <div className="flex items-baseline gap-1">
+            {/* TLP TikTok text in capital letters */}
+            <div className="flex flex-col items-center gap-2">
+              <motion.div
+                className="flex items-center gap-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.6 }}
+              >
                 <span
-                  className="font-display text-5xl md:text-7xl font-black tracking-tight"
+                  className="font-black tracking-widest uppercase"
                   style={{
-                    color: "oklch(0.65 0.28 350)",
+                    fontSize: "clamp(2.5rem, 8vw, 4.5rem)",
+                    color: "oklch(0.55 0.22 145)",
                     textShadow:
-                      "-3px -3px 0 oklch(0.72 0.18 195 / 0.7), 3px 3px 0 oklch(0.65 0.28 350 / 0.7), 0 0 40px oklch(0.65 0.28 350 / 0.5)",
+                      "0 0 30px oklch(0.55 0.22 145 / 0.6), 2px 2px 0 oklch(0 0 0 / 0.5)",
+                    letterSpacing: "0.15em",
                   }}
                 >
-                  tlp
+                  TLP
                 </span>
                 <span
-                  className="font-display text-5xl md:text-7xl font-black tracking-tight text-white"
+                  className="font-black tracking-wider uppercase text-white"
                   style={{
-                    textShadow: "0 0 30px oklch(1 0 0 / 0.4)",
+                    fontSize: "clamp(2.5rem, 8vw, 4.5rem)",
+                    textShadow:
+                      "0 0 30px oklch(1 0 0 / 0.4), 2px 2px 0 oklch(0 0 0 / 0.5)",
+                    letterSpacing: "0.1em",
                   }}
                 >
-                  TikTok
+                  TIKTOK
                 </span>
-              </div>
+              </motion.div>
+              <motion.div
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ delay: 0.6, duration: 0.5 }}
+                className="h-0.5 w-48 rounded-full"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent, oklch(0.55 0.22 145), oklch(1 0 0 / 0.6), transparent)",
+                }}
+              />
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.5 }}
-                className="text-sm text-muted-foreground tracking-widest uppercase font-medium"
+                transition={{ delay: 0.7, duration: 0.5 }}
+                className="text-sm tracking-widest uppercase font-medium"
+                style={{ color: "oklch(0.75 0.1 145)" }}
               >
-                Short Videos · Unlimited Fun
+                لبیک یا رسول اللہ ﷺ
               </motion.p>
             </div>
 
