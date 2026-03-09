@@ -1,16 +1,28 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { VideoCard } from "../components/VideoCard";
-import { SAMPLE_VIDEOS } from "../data/sampleVideos";
+import { SAMPLE_VIDEOS, type SampleVideo } from "../data/sampleVideos";
 import { useGetFeed } from "../hooks/useQueries";
+
+// Generate an infinite-feeling list by repeating sample videos
+function buildInfiniteVideoList(count = 60): SampleVideo[] {
+  const result: SampleVideo[] = [];
+  for (let i = 0; i < count; i++) {
+    const src = SAMPLE_VIDEOS[i % SAMPLE_VIDEOS.length];
+    result.push({ ...src, id: `${src.id}-loop-${i}` });
+  }
+  return result;
+}
+
+const INFINITE_VIDEOS = buildInfiniteVideoList(60);
 
 export function HomePage() {
   const { data: videos, isLoading } = useGetFeed(0, 20);
   const feedRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const usingSampleVideos = !videos || videos.length === 0;
-  const displayVideos = usingSampleVideos ? SAMPLE_VIDEOS : videos;
+  const hasUploadedVideos = videos && videos.length > 0;
+  const _displayVideos = hasUploadedVideos ? videos : INFINITE_VIDEOS;
 
   const handleScroll = useCallback(() => {
     const container = feedRef.current;
@@ -42,28 +54,23 @@ export function HomePage() {
 
   return (
     <div ref={feedRef} className="video-feed pb-16" aria-label="Video feed">
-      {displayVideos.map((item, index) => {
-        const isSample = usingSampleVideos;
-        return (
-          <VideoCard
-            key={
-              isSample
-                ? (item as (typeof SAMPLE_VIDEOS)[0]).id
-                : (item as { id: string }).id
-            }
-            video={
-              isSample
-                ? undefined
-                : (item as Parameters<typeof VideoCard>[0]["video"])
-            }
-            sampleVideo={
-              isSample ? (item as (typeof SAMPLE_VIDEOS)[0]) : undefined
-            }
-            index={index}
-            isActive={index === activeIndex}
-          />
-        );
-      })}
+      {hasUploadedVideos
+        ? (videos as { id: string }[]).map((item, index) => (
+            <VideoCard
+              key={item.id}
+              video={item as Parameters<typeof VideoCard>[0]["video"]}
+              index={index}
+              isActive={index === activeIndex}
+            />
+          ))
+        : INFINITE_VIDEOS.map((item, index) => (
+            <VideoCard
+              key={item.id}
+              sampleVideo={item}
+              index={index}
+              isActive={index === activeIndex}
+            />
+          ))}
     </div>
   );
 }

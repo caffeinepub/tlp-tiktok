@@ -1,15 +1,14 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
+  ExternalLink,
   Heart,
   MessageCircle,
   Music2,
   Play,
   Share2,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import {
   SAMPLE_VIDEOS,
@@ -34,12 +33,10 @@ export function VideoCard({
   index,
   isActive,
 }: VideoCardProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [muted, setMuted] = useState(true);
-  const [playing, setPlaying] = useState(true);
   const [liked, setLiked] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const likeMutation = useLikeVideo();
   const { identity } = useInternetIdentity();
 
@@ -52,38 +49,25 @@ export function VideoCard({
   const music = sampleVideo?.music ?? "🎵 Original Sound";
   const videoId = video?.id ?? sampleVideo?.id ?? `sample-${index}`;
 
-  // Determine video URL
-  const videoUrl = sampleVideo
-    ? sampleVideo.videoUrl
-    : video?.videoBlob
-      ? video.videoBlob.getDirectURL()
-      : SAMPLE_VIDEOS[index % SAMPLE_VIDEOS.length].videoUrl;
+  // YouTube ID and thumbnail
+  const youtubeId = sampleVideo?.youtubeId ?? null;
+  const youtubeUrl = youtubeId
+    ? `https://www.youtube.com/watch?v=${youtubeId}`
+    : (sampleVideo?.videoUrl ?? null);
 
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    if (isActive) {
-      el.currentTime = 0;
-      const playPromise = el.play();
-      if (playPromise) playPromise.catch(() => setPlaying(false));
-      setPlaying(true);
-    } else {
-      el.pause();
-      setPlaying(false);
-    }
-  }, [isActive]);
+  // For uploaded videos - direct URL
+  const uploadedVideoUrl = video?.videoBlob
+    ? video.videoBlob.getDirectURL()
+    : null;
 
-  const togglePlay = useCallback(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    if (playing) {
-      el.pause();
-      setPlaying(false);
-    } else {
-      el.play().catch(() => {});
-      setPlaying(true);
-    }
-  }, [playing]);
+  // Thumbnail: try maxresdefault, fallback to hqdefault
+  const primaryThumb = youtubeId
+    ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
+    : null;
+  const fallbackThumb = youtubeId
+    ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`
+    : null;
+  const thumbnailSrc = imgError ? fallbackThumb : primaryThumb;
 
   const handleDoubleTap = useCallback(() => {
     setShowHeart(true);
@@ -98,7 +82,7 @@ export function VideoCard({
 
   const handleLike = useCallback(() => {
     if (!identity) {
-      toast.error("Please login to like videos");
+      toast.error("لائک کرنے کے لیے لاگ ان کریں");
       return;
     }
     setLiked((prev) => !prev);
@@ -108,19 +92,26 @@ export function VideoCard({
   }, [identity, liked, video, videoId, likeMutation]);
 
   const handleShare = useCallback(() => {
+    const shareUrl = youtubeUrl ?? window.location.href;
     if (navigator.share) {
       navigator
-        .share({ title, text: description, url: window.location.href })
+        .share({ title, text: description, url: shareUrl })
         .catch(() => {});
     } else {
       navigator.clipboard
-        .writeText(window.location.href)
+        .writeText(shareUrl)
         .then(() => {
-          toast.success("Link copied!");
+          toast.success("لنک کاپی ہو گیا!");
         })
         .catch(() => {});
     }
-  }, [title, description]);
+  }, [title, description, youtubeUrl]);
+
+  const handleOpenYoutube = useCallback(() => {
+    if (youtubeUrl) {
+      window.open(youtubeUrl, "_blank", "noopener,noreferrer");
+    }
+  }, [youtubeUrl]);
 
   const dataOcidIndex = index + 1;
 
@@ -130,19 +121,73 @@ export function VideoCard({
       data-ocid={`feed.video.item.${dataOcidIndex}`}
       onDoubleClick={handleDoubleTap}
     >
-      {/* Video element */}
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: video element */}
-      <video
-        ref={videoRef}
-        src={videoUrl}
-        className="absolute inset-0 w-full h-full object-cover"
-        loop
-        muted={muted}
-        playsInline
-        preload="auto"
-        poster=""
-        onClick={togglePlay}
-      />
+      {/* Uploaded video - direct play */}
+      {uploadedVideoUrl ? (
+        <video
+          src={uploadedVideoUrl}
+          className="absolute inset-0 w-full h-full object-cover"
+          loop
+          autoPlay={isActive}
+          playsInline
+          preload="auto"
+        >
+          <track kind="captions" />
+        </video>
+      ) : thumbnailSrc ? (
+        /* YouTube video - show thumbnail with play button overlay */
+        <>
+          <img
+            src={thumbnailSrc}
+            alt={title}
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
+          {/* Play button overlay - tapping opens YouTube */}
+          <motion.button
+            className="absolute inset-0 flex items-center justify-center z-10 w-full h-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenYoutube();
+            }}
+            whileTap={{ scale: 0.95 }}
+            aria-label="YouTube پر چلائیں"
+            data-ocid={`feed.play_button.${dataOcidIndex}`}
+          >
+            {/* Center play button */}
+            <motion.div
+              animate={isActive ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+              transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+              className="flex flex-col items-center gap-2"
+            >
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center shadow-2xl"
+                style={{
+                  background: "oklch(0.65 0.28 350 / 0.9)",
+                  boxShadow: "0 0 40px oklch(0.65 0.28 350 / 0.6)",
+                }}
+              >
+                <Play className="w-10 h-10 text-white fill-white ml-1" />
+              </div>
+              <div
+                className="flex items-center gap-1 px-3 py-1 rounded-full text-white text-xs font-semibold"
+                style={{ background: "oklch(0.1 0 0 / 0.7)" }}
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>YouTube پر دیکھیں</span>
+              </div>
+            </motion.div>
+          </motion.button>
+        </>
+      ) : (
+        /* Fallback gradient background */
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(135deg, oklch(0.15 0.08 145), oklch(0.08 0 0))",
+          }}
+        />
+      )}
 
       {/* Gradients */}
       <div className="absolute inset-0 video-gradient-top pointer-events-none" />
@@ -156,53 +201,22 @@ export function VideoCard({
             animate={{ scale: 1.5, opacity: 1 }}
             exit={{ scale: 2, opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
           >
             <Heart className="w-24 h-24 fill-tlp-pink text-tlp-pink drop-shadow-2xl" />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Play/Pause indicator */}
-      <AnimatePresence>
-        {!playing && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 0.8, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          >
-            <div className="w-16 h-16 rounded-full bg-black/60 flex items-center justify-center">
-              <Play className="w-8 h-8 text-white fill-white ml-1" />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Top controls */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-16 pointer-events-none">
+      {/* Top logo */}
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-16 pointer-events-none z-20">
         <h1 className="font-display font-black text-xl text-white tlp-logo-glow pointer-events-auto select-none">
           tlp<span className="text-white ml-1">TikTok</span>
         </h1>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setMuted((m) => !m);
-          }}
-          className="w-9 h-9 rounded-full bg-black/40 flex items-center justify-center pointer-events-auto"
-          aria-label={muted ? "Unmute" : "Mute"}
-        >
-          {muted ? (
-            <VolumeX className="w-5 h-5 text-white" />
-          ) : (
-            <Volume2 className="w-5 h-5 text-white" />
-          )}
-        </button>
       </div>
 
       {/* Right sidebar actions */}
-      <div className="absolute right-3 bottom-24 flex flex-col items-center gap-5 z-10">
+      <div className="absolute right-3 bottom-24 flex flex-col items-center gap-5 z-20">
         {/* Avatar */}
         <div className="relative mb-2">
           <Avatar className="w-12 h-12 ring-2 ring-white">
@@ -303,7 +317,7 @@ export function VideoCard({
       </div>
 
       {/* Bottom info */}
-      <div className="absolute bottom-20 left-4 right-20 z-10">
+      <div className="absolute bottom-20 left-4 right-20 z-20">
         <p className="text-white font-bold text-sm mb-1 drop-shadow">
           {username}
         </p>
